@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flashcard Quiz App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <style>
+    /* Reset and base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #7f7fd5, #86a8e7, #91eae4);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: #222;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      padding: 16px;
+    }
+    h1 {
+      font-weight: 700;
+      font-size: 2rem;
+      color: #fff;
+      margin: 0;
+      user-select: none;
+      text-shadow: 0 0 8px rgba(0,0,0,0.15);
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      box-shadow: 0 6px 15px rgba(118,75,162,0.4);
+      transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    button:focus-visible {
+      outline-offset: 2px;
+      outline: 3px solid #764ba2aa;
+    }
+    button:hover:not(:disabled) {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+      box-shadow: 0 10px 20px rgba(118,75,162,0.6);
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+      background: #bbb;
+      color: #555;
+      transform: none;
+    }
+    .material-icons {
+      font-size: 20px;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    /* Container */
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      padding-bottom: 32px;
+    }
+
+    /* Header with Title and Add Button */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 8px;
+    }
+    /* Flashcard area */
+    .flashcard-container {
+      perspective: 1200px;
+      max-width: 100%;
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Flashcard style and flip animation */
+    .flashcard {
+      width: 100%;
+      max-width: 420px;
+      height: 280px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      box-shadow: 0 24px 48px rgba(102, 126, 234, 0.5);
+      color: #333;
+      font-size: 1.6rem;
+      font-weight: 600;
+      line-height: 1.3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.6rem 2rem;
+      text-align: center;
+      user-select: none;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .flashcard.flipped {
+      transform: rotateY(180deg);
+      cursor: default;
+    }
+    .flashcard-side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.6rem 2rem;
+    }
+    .flashcard-front {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      font-size: 1.8rem;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+    .flashcard-back {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+      color: #fff;
+      transform: rotateY(180deg);
+      font-size: 1.6rem;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    /* Controls area */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 0 8px;
+      flex-wrap: wrap;
+    }
+    .btn-icon {
+      padding: 12px;
+      border-radius: 50%;
+      font-size: 20px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn-icon:hover:not(:disabled) {
+      background: #5a4d90;
+      box-shadow: 0 8px 20px rgba(86, 61, 145, 0.7);
+      transform: translateY(-3px);
+    }
+    .btn-icon:disabled {
+      background: #bbb;
+      box-shadow: none;
+      cursor: default;
+      transform: none;
+    }
+    .btn-text {
+      flex-grow: 1;
+      min-width: 120px;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Flashcard manager panel */
+    .manager-panel {
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 12px 36px rgba(102, 126, 234, 0.35);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 100%;
+      overflow-y: auto;
+      max-height: 360px;
+    }
+    .manager-panel h2 {
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+      font-weight: 700;
+      color: #4b3b94;
+      user-select: none;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    label {
+      font-weight: 600;
+      color: #4b3b94;
+      user-select: none;
+    }
+    input[type="text"], textarea {
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 2px solid #667eea;
+      resize: vertical;
+      min-height: 40px;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #764ba2;
+      box-shadow: 0 0 8px 3px rgba(118, 75, 162, 0.35);
+    }
+    textarea {
+      min-height: 80px;
+      line-height: 1.4;
+    }
+    .form-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .form-actions button {
+      flex: 1;
+    }
+    /* Flashcards list inside manager */
+    .flashcards-list {
+      margin-top: 24px;
+      max-height: 150px;
+      overflow-y: auto;
+      border-top: 1px solid #ccc;
+      padding-top: 12px;
+    }
+    .flashcard-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #f5f6ff;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.1);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .flashcard-item:hover, .flashcard-item.active {
+      background: #d6daff;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    .flashcard-item span {
+      flex-grow: 1;
+      font-weight: 600;
+      color: #4b3b94;
+      user-select: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-right: 12px;
+    }
+    .flashcard-item button.delete-btn {
+      background: transparent;
+      color: #b00020;
+      font-size: 20px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .flashcard-item button.delete-btn:hover {
+      background: #b00020;
+      color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 540px) {
+      .app-container {
+        max-width: 100%;
+        padding: 0 8px;
+      }
+      .controls {
+        flex-direction: column;
+      }
+      .btn-text {
+        min-width: auto;
+        width: 100%;
+        justify-content: center;
+      }
+      .flashcard {
+        height: 260px;
+        font-size: 1.4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container" role="main">
+    <header>
+      <h1>Flashcard Quiz App</h1>
+      <button id="addCardBtn" aria-label="Add new flashcard" title="Add New Card">
+        <span class="material-icons">add_circle_outline</span> Add Card
+      </button>
+    </header>
+
+    <section class="flashcard-container" aria-live="polite" aria-atomic="true">
+      <div tabindex="0" id="flashcard" class="flashcard" role="region" aria-label="Flashcard question and answer" aria-live="polite">
+        <div class="flashcard-side flashcard-front" id="flashcard-question">
+          Loading...
+        </div>
+        <div class="flashcard-side flashcard-back" id="flashcard-answer" hidden>
+          Loading...
+        </div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Flashcard controls">
+      <button id="prevBtn" class="btn-icon" aria-label="Previous flashcard" title="Previous Card" disabled>
+        <span class="material-icons">navigate_before</span>
+      </button>
+      <button id="toggleAnswerBtn" class="btn-text" aria-pressed="false" aria-label="Show answer" title="Show Answer">
+        <span class="material-icons" id="toggleAnswerIcon">visibility</span>
+        Show Answer
+      </button>
+      <button id="nextBtn" class="btn-icon" aria-label="Next flashcard" title="Next Card" disabled>
+        <span class="material-icons">navigate_next</span>
+      </button>
+    </section>
+
+    <section class="manager-panel" aria-label="Flashcard management panel" hidden>
+      <h2>Manage Flashcards</h2>
+      <form id="cardForm" aria-label="Add or edit flashcard form">
+        <label for="cardQuestion">Question</label>
+        <textarea id="cardQuestion" required placeholder="Enter question here"></textarea>
+
+        <label for="cardAnswer">Answer</label>
+        <textarea id="cardAnswer" required placeholder="Enter answer here"></textarea>
+
+        <div class="form-actions">
+          <button type="submit" id="saveCardBtn">Save</button>
+          <button type="button" id="cancelEditBtn">Cancel</button>
+        </div>
+      </form>
+
+      <div class="flashcards-list" aria-label="Existing flashcards list" role="listbox" tabindex="0"></div>
+    </section>
+  </div>
+
+  <script>
+    (function(){
+      // Elements references
+      const addCardBtn = document.getElementById('addCardBtn');
+      const managerPanel = document.querySelector('.manager-panel');
+      const cardForm = document.getElementById('cardForm');
+      const cardQuestionInput = document.getElementById('cardQuestion');
+      const cardAnswerInput = document.getElementById('cardAnswer');
+      const saveCardBtn = document.getElementById('saveCardBtn');
+      const cancelEditBtn = document.getElementById('cancelEditBtn');
+      const flashcardEl = document.getElementById('flashcard');
+      const questionEl = document.getElementById('flashcard-question');
+      const answerEl = document.getElementById('flashcard-answer');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const toggleAnswerBtn = document.getElementById('toggleAnswerBtn');
+      const toggleAnswerIcon = document.getElementById('toggleAnswerIcon');
+      const flashcardsListEl = document.querySelector('.flashcards-list');
+
+      // State variables
+      let flashcards = [];
+      let currentIndex = 0;
+      let showAnswer = false;
+      let editingIndex = null;
+
+      // Storage key
+      const STORAGE_KEY = 'flashcardQuizAppData';
+
+      // Initialize app
+      function init() {
+        loadFlashcards();
+        if (flashcards.length === 0) {
+          flashcards = [
+            { question: "What is the capital of France?", answer: "Paris" },
+            { question: "What is 2 + 2?", answer: "4" },
+            { question: "Who wrote 'Hamlet'?", answer: "William Shakespeare" }
+          ];
+          saveFlashcards();
+        }
+        currentIndex = 0;
+        editingIndex = null;
+        hideManagerPanel();
+        updateFlashcardDisplay();
+        updateControls();
+        renderFlashcardsList();
+      }
+
+      // Load flashcards from localStorage
+      function loadFlashcards() {
+        try {
+          const storedData = localStorage.getItem(STORAGE_KEY);
+          if (storedData) {
+            const loaded = JSON.parse(storedData);
+            if (Array.isArray(loaded)) {
+              flashcards = loaded;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load flashcards from storage', e);
+        }
+      }
+      // Save flashcards to localStorage
+      function saveFlashcards() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(flashcards));
+        } catch (e) {
+          console.error('Failed to save flashcards to storage', e);
+        }
+      }
+
+      // Update displayed flashcard question and answer
+      function updateFlashcardDisplay() {
+        if (flashcards.length === 0) {
+          questionEl.textContent = "No flashcards available. Please add your first card.";
+          answerEl.textContent = "";
+          flashcardEl.classList.remove('flipped');
+          toggleAnswerBtn.disabled = true;
+          prevBtn.disabled = true;
+          nextBtn.disabled = true;
+          return;
+        }
+
+        const card = flashcards[currentIndex];
+        questionEl.textContent = card.question;
+        answerEl.textContent = card.answer;
+        if (showAnswer) {
+          flashcardEl.classList.add('flipped');
+          toggleAnswerBtn.setAttribute('aria-pressed', 'true');
+          toggleAnswerIcon.textContent = 'visibility_off';
+          toggleAnswerBtn.textContent = ' Hide Answer';
+          toggleAnswerBtn.prepend(toggleAnswerIcon);
+        } else {
+          flashcardEl.classList.remove('flipped');
+          toggleAnswerBtn.setAttribute('aria-pressed', 'false');
+          toggleAnswerIcon.textContent = 'visibility';
+          toggleAnswerBtn.textContent = ' Show Answer';
+          toggleAnswerBtn.prepend(toggleAnswerIcon);
+        }
+        toggleAnswerBtn.disabled = false;
+        updateControls();
+      }
+
+      // Update state of next/prev buttons
+      function updateControls() {
+        prevBtn.disabled = currentIndex <= 0 || flashcards.length <= 1;
+        nextBtn.disabled = currentIndex >= flashcards.length - 1 || flashcards.length <=1;
+      }
+
+      // Show manager panel with optional edit data
+      function showManagerPanel(editIndex = null) {
+        managerPanel.hidden = false;
+        addCardBtn.disabled = true;
+        toggleAnswerBtn.disabled = true;
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+
+        editingIndex = editIndex;
+        if (editIndex !== null && flashcards[editIndex]) {
+          cardQuestionInput.value = flashcards[editIndex].question;
+          cardAnswerInput.value = flashcards[editIndex].answer;
+          saveCardBtn.textContent = 'Update Card';
+          cardQuestionInput.focus();
+          renderFlashcardsList(editIndex);
+        } else {
+          cardForm.reset();
+          saveCardBtn.textContent = 'Add Card';
+          cardQuestionInput.focus();
+          renderFlashcardsList(null);
+        }
+      }
+
+      // Hide manager panel
+      function hideManagerPanel() {
+        managerPanel.hidden = true;
+        addCardBtn.disabled = false;
+        toggleAnswerBtn.disabled = flashcards.length === 0;
+        updateControls();
+        editingIndex = null;
+        renderFlashcardsList();
+      }
+
+      // Add or update card based on form data
+      function saveCard(event) {
+        event.preventDefault();
+        const q = cardQuestionInput.value.trim();
+        const a = cardAnswerInput.value.trim();
+        if (!q || !a) return;
+
+        if (editingIndex !== null && flashcards[editingIndex]) {
+          flashcards[editingIndex] = { question: q, answer: a };
+          currentIndex = editingIndex;
+        } else {
+          flashcards.push({ question: q, answer: a });
+          currentIndex = flashcards.length - 1;
+        }
+        saveFlashcards();
+        hideManagerPanel();
+        showAnswer = false;
+        updateFlashcardDisplay();
+      }
+
+      // Delete card by index
+      function deleteCard(index) {
+        if (index < 0 || index >= flashcards.length) return;
+        flashcards.splice(index, 1);
+        saveFlashcards();
+        if (currentIndex >= flashcards.length) currentIndex = flashcards.length - 1;
+        if (currentIndex < 0) currentIndex = 0;
+        hideManagerPanel();
+        showAnswer = false;
+        updateFlashcardDisplay();
+      }
+
+      // Navigate flashcards
+      function goPrev() {
+        if (currentIndex > 0) {
+          currentIndex--;
+          showAnswer = false;
+          updateFlashcardDisplay();
+        }
+      }
+      function goNext() {
+        if (currentIndex < flashcards.length -1) {
+          currentIndex++;
+          showAnswer = false;
+          updateFlashcardDisplay();
+        }
+      }
+
+      // Toggle answer visibility with flip animation
+      function toggleAnswer() {
+        if (flashcards.length === 0) return;
+        showAnswer = !showAnswer;
+        updateFlashcardDisplay();
+      }
+
+      // Render flashcards list in the manager panel
+      // Highlight active card or editing card
+      function renderFlashcardsList(activeIndex = editingIndex) {
+        flashcardsListEl.innerHTML = '';
+        if (flashcards.length === 0) {
+          flashcardsListEl.innerHTML = '<p style="color:#764ba2; user-select:none;">No flashcards yet.</p>';
+          return;
+        }
+        flashcards.forEach((card, idx) => {
+          const item = document.createElement('div');
+          item.className = 'flashcard-item';
+          if (idx === activeIndex) item.classList.add('active');
+          item.setAttribute('role', 'option');
+          item.setAttribute('aria-selected', idx === activeIndex ? 'true' : 'false');
+          item.tabIndex = 0;
+
+          const textSpan = document.createElement('span');
+          textSpan.textContent = card.question;
+          item.appendChild(textSpan);
+
+          // Clicking on item selects for editing
+          item.addEventListener('click', () => {
+            showManagerPanel(idx);
+          });
+          // Keyboard accessible: Enter key edits
+          item.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              showManagerPanel(idx);
+            }
+          });
+
+          // Delete button
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'delete-btn';
+          deleteBtn.setAttribute('aria-label', 'Delete flashcard');
+          deleteBtn.innerHTML = '<span class="material-icons" aria-hidden="true">delete_outline</span>';
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('Delete this flashcard?')) {
+              deleteCard(idx);
+            }
+          });
+          item.appendChild(deleteBtn);
+
+          flashcardsListEl.appendChild(item);
+        });
+      }
+
+      // Event listeners
+      addCardBtn.addEventListener('click', () => {
+        showManagerPanel();
+      });
+      cancelEditBtn.addEventListener('click', () => {
+        hideManagerPanel();
+      });
+      cardForm.addEventListener('submit', saveCard);
+      prevBtn.addEventListener('click', goPrev);
+      nextBtn.addEventListener('click', goNext);
+      toggleAnswerBtn.addEventListener('click', toggleAnswer);
+
+      // Clicking on flashcard flips answer as well
+      flashcardEl.addEventListener('click', () => {
+        toggleAnswer();
+      });
+
+      // Keyboard navigation on flashcard
+      flashcardEl.addEventListener('keydown', (e) => {
+        switch(e.key) {
+          case 'ArrowRight':
+            goNext();
+            break;
+          case 'ArrowLeft':
+            goPrev();
+            break;
+          case ' ':
+          case 'Enter':
+            e.preventDefault();
+            toggleAnswer();
+            break;
+        }
+      });
+
+      // Initialize app on page load
+      init();
+    })();
+  </script>
+</body>
+</html>
+
